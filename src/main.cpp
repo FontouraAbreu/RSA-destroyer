@@ -1,7 +1,9 @@
 #include <cmath>
 #include <iostream>
-#include <omp.h>
+// #include <omp.h>
 #include <vector>
+#include <getopt.h>
+#include <algorithm>
 
 /*
   Dado um texto cifrado com o RSA e sabendo que p e q são números primos
@@ -45,6 +47,7 @@ std::pair<int, int> factorize_n(int n) {
 // Função para calcular a chave privada d
 int find_private_key(int e, int n, int p, int q) {
     int phi_n = (p - 1) * (q - 1); // totient
+    std::cout << "phi(n): " << phi_n << std::endl;
 
     int d = 0;
 
@@ -87,21 +90,147 @@ std::string phrases[] = {
     "Luiz Carlos Pessoa Albini"
 };
 
+// Função para verificar se um número é primo
+bool is_prime(int num) {
+    if (num < 2) return false;
+    for (int i = 2; i * i <= num; i++) {
+        if (num % i == 0) return false;
+    }
+    return true;
+}
+
+// Função para gerar números primos aleatórios de 10 bits
+int generate_random_prime() {
+    int prime;
+    do {
+        prime = rand() % 1024 + 1; // Gera números entre 1 e 1024
+    } while (!is_prime(prime));
+    return prime;
+}
+
+
+// Gerar chave privada (p, q), ambos com no máximo 10 bits
+std::pair<int, int> generate_private_key() {
+    int p = generate_random_prime();
+    int q;
+    do {
+        q = generate_random_prime();
+    } while (p == q); // Garantir que p e q sejam diferentes
+    return std::make_pair(p, q);
+}
+
+// Gerar chave pública (e, n) a partir de p e q
+std::pair<int, int> generate_public_key(int p, int q) {
+    int n = p * q;
+    int phi_n = (p - 1) * (q - 1);
+
+    // Escolher e pequeno que seja coprimo com phi_n
+    int e = 3;
+    while (std::__gcd(e, phi_n) != 1 && e < phi_n) {
+        e += 2; // Incrementar apenas números ímpares
+    }
+    if (e >= phi_n) {
+        std::cout << "Error: Could not generate a valid public key!\n";
+        exit(1);
+    }
+    return std::make_pair(e, n);
+}
 int main(int argc, char *argv[]) {
+    int opt;
+    std::string message;
+    std::pair <int, int> private_keys, public_keys;
+    int d, n, e, p, q, phi_n;
+    std::vector<int> encrypted, encrypted_message;
+    std::string decrypted, num_str;
+
+    while ((opt = getopt(argc, argv, "hged")) != -1) {
+        switch (opt) {
+            case 'h':
+                std::cout << "Usage: " << argv[0] << " [-h] [-g]\n";
+                std::cout << "Options:\n";
+                std::cout << "  -h  Show this help message and exit\n";
+                std::cout << "  -g  Generate a public key\n";
+                return 0;
+            case 'g':
+                std::cout << "Generating a key pair...\n";
+
+                private_keys = generate_private_key();
+                p = private_keys.first;
+                q = private_keys.second;
+
+                std::cout << "Private key primes (p, q): " << p << " " << q << std::endl;
+
+                public_keys = generate_public_key(p, q);
+                e = public_keys.first;
+                n = public_keys.second;
+
+                std::cout << "Public key (e, n): " << e << " " << n << std::endl;
+
+                phi_n = (p - 1) * (q - 1);
+                d = 0;
+                for (int i = 1; i < phi_n; i++) {
+                    if ((i * e) % phi_n == 1) {
+                        d = i;
+                        break;
+                    }
+                }
+
+                std::cout << "Private key (d, n): " << d << " " << n << std::endl;
+                return 0;
+            case 'e':
+                std::cout << "Enter your private key (d, n): ";
+                std::cin >> d >> n;
+                std::cout << "Encrypting a message...\n";
+                // lendo a frase criptografada
+                std::cout << "Enter the message to encrypt: ";
+                // std::cin.ignore();
+                // std::getline(std::cin, message);
+                message = "eu amo o dvd!";
+                encrypted = encrypt(message, d, n);
+                std::cout << "Encrypted message: ";
+                for (int num : encrypted) {
+                    std::cout << num << " ";
+                }
+                std::cout << std::endl;
+                return 0;
+            case 'd':
+                std::cout << "Enter your public key (e, n): ";
+                std::cin >> e >> n;
+                std::cout << "Decrypting a message...\n";
+                std::cout << "Enter the message to decrypt: ";
+                std::cin.ignore();
+                std::getline(std::cin, message);
+                num_str = "";
+                for (char ch : message) {
+                    if (ch == ' ') {
+                        encrypted_message.push_back(std::stoi(num_str));
+                        num_str = "";
+                    } else {
+                        num_str += ch;
+                    }
+                }
+                encrypted_message.push_back(std::stoi(num_str));
+                decrypted = decrypt(encrypted_message, e, n);
+                std::cout << "Decrypted message: " << decrypted << std::endl;
+                return 0;
+            case '?':
+                std::cerr << "Usage: " << argv[0] << " [-h] [-g]\n";
+                return 1;
+        }
+    }
     // set random seed
     srand(time(NULL));
-    int e, n;
 
     // Lendo a chave pública do terminal
     std::cout << "Enter the public key (e, n): ";
     std::cin >> e >> n;
 
-    auto [p, q] = factorize_n(n);
+    auto [p_, q_] = factorize_n(n);
 
     std::cout << "p: " << p << std::endl;
     std::cout << "q: " << q << std::endl;
 
-    int d = find_private_key(e, n, p, q);
+    d = find_private_key(e, n, p, q);
 
     std::cout << "The private key is: " << d << std::endl;
 
@@ -110,7 +239,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Random phrase to encrypt: " << random_phrase << std::endl;
 
     // Criptografando a frase
-    std::vector<int> encrypted = encrypt(random_phrase, e, n);
+    encrypted = encrypt(random_phrase, e, n);
 
     // Exibindo a frase criptografada
     std::cout << "Encrypted phrase: ";
@@ -120,7 +249,7 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl;
 
     // Descriptografando a frase
-    std::string decrypted = decrypt(encrypted, d, n);
+    decrypted = decrypt(encrypted, d, n);
     std::cout << "Decrypted phrase: " << decrypted << std::endl;
 
     return 0;
