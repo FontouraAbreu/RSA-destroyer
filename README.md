@@ -24,7 +24,11 @@ Then we can decrypt a message using the formula `m = c^d mod n`, where `m` is th
 
 ## How to run
 
-...
+To run the program, you need to have a C++ compiler installed. You can compile the program using the following command:
+
+```bash
+g++ main.cpp -o main
+```
 
 ## Authors
 
