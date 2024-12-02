@@ -62,8 +62,8 @@ int find_private_key(int e, int n, int p, int q) {
 }
 
 // Função de criptografia usando exponenciação modular
-std::vector<int> encrypt(const std::string &m, int e, int n) {
-    std::vector<int> encrypted_message;
+std::vector<long> encrypt(const std::string &m, int e, int n) {
+    std::vector<long> encrypted_message;
     for (char ch : m) {
         int encrypted_char = mod_exp(static_cast<int>(ch), e, n);
         encrypted_message.push_back(encrypted_char);
@@ -72,7 +72,7 @@ std::vector<int> encrypt(const std::string &m, int e, int n) {
 }
 
 // Função de descriptografia usando exponenciação modular
-std::string decrypt(const std::vector<int> &encrypted_message, int d, int n) {
+std::string decrypt(const std::vector<long> &encrypted_message, int d, int n) {
     std::string decrypted_message = "";
     for (int c : encrypted_message) {
         int decrypted_char = mod_exp(c, d, n);
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     std::string message;
     std::pair <int, int> private_keys, public_keys;
     int d, n, e, p, q, phi_n;
-    std::vector<int> encrypted, encrypted_message;
+    std::vector<long> encrypted, encrypted_message;
     std::string decrypted, num_str;
 
     while ((opt = getopt(argc, argv, "hged")) != -1) {
@@ -150,6 +150,8 @@ int main(int argc, char *argv[]) {
                 std::cout << "Options:\n";
                 std::cout << "  -h  Show this help message and exit\n";
                 std::cout << "  -g  Generate a public key\n";
+                std::cout << "  -e  Encrypt a message\n";
+                std::cout << "  -d  Decrypt a message\n";
                 return 0;
             case 'g':
                 std::cout << "Generating a key pair...\n";
@@ -188,7 +190,7 @@ int main(int argc, char *argv[]) {
                 message = "eu amo o dvd!";
                 encrypted = encrypt(message, d, n);
                 std::cout << "Encrypted message: ";
-                for (int num : encrypted) {
+                for (long num : encrypted) {
                     std::cout << num << " ";
                 }
                 std::cout << std::endl;
@@ -201,6 +203,8 @@ int main(int argc, char *argv[]) {
                 std::cin.ignore();
                 std::getline(std::cin, message);
                 num_str = "";
+
+                // lendo a mensagem criptografada no formato necessário
                 for (char ch : message) {
                     if (ch == ' ') {
                         encrypted_message.push_back(std::stoi(num_str));
@@ -210,6 +214,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 encrypted_message.push_back(std::stoi(num_str));
+                // descriptografando a mensagem
                 decrypted = decrypt(encrypted_message, e, n);
                 std::cout << "Decrypted message: " << decrypted << std::endl;
                 return 0;
@@ -218,39 +223,39 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
     }
-    // set random seed
-    srand(time(NULL));
+    // // set random seed
+    // srand(time(NULL));
 
-    // Lendo a chave pública do terminal
-    std::cout << "Enter the public key (e, n): ";
-    std::cin >> e >> n;
+    // // Lendo a chave pública do terminal
+    // std::cout << "Enter the public key (e, n): ";
+    // std::cin >> e >> n;
 
-    auto [p_, q_] = factorize_n(n);
+    // auto [p_, q_] = factorize_n(n);
 
-    std::cout << "p: " << p << std::endl;
-    std::cout << "q: " << q << std::endl;
+    // std::cout << "p: " << p << std::endl;
+    // std::cout << "q: " << q << std::endl;
 
-    d = find_private_key(e, n, p, q);
+    // d = find_private_key(e, n, p, q);
 
-    std::cout << "The private key is: " << d << std::endl;
+    // std::cout << "The private key is: " << d << std::endl;
 
-    // Escolhendo uma frase aleatória para criptografar
-    std::string random_phrase = phrases[rand() % 5];
-    std::cout << "Random phrase to encrypt: " << random_phrase << std::endl;
+    // // Escolhendo uma frase aleatória para criptografar
+    // std::string random_phrase = phrases[rand() % 5];
+    // std::cout << "Random phrase to encrypt: " << random_phrase << std::endl;
 
-    // Criptografando a frase
-    encrypted = encrypt(random_phrase, e, n);
+    // // Criptografando a frase
+    // encrypted = encrypt(random_phrase, e, n);
 
-    // Exibindo a frase criptografada
-    std::cout << "Encrypted phrase: ";
-    for (int num : encrypted) {
-        std::cout << num << " ";
-    }
-    std::cout << std::endl;
+    // // Exibindo a frase criptografada
+    // std::cout << "Encrypted phrase: ";
+    // for (int num : encrypted) {
+    //     std::cout << num << " ";
+    // }
+    // std::cout << std::endl;
 
-    // Descriptografando a frase
-    decrypted = decrypt(encrypted, d, n);
-    std::cout << "Decrypted phrase: " << decrypted << std::endl;
+    // // Descriptografando a frase
+    // decrypted = decrypt(encrypted, d, n);
+    // std::cout << "Decrypted phrase: " << decrypted << std::endl;
 
     return 0;
 }
