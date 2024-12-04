@@ -5,6 +5,8 @@
 #include <getopt.h>
 #include <algorithm>
 
+#define DEBUG
+
 /*
   Dado um texto cifrado com o RSA e sabendo que p e q são números primos
   menores que 1024 (10 bits), faça um programa que encontre a chave privada
@@ -62,21 +64,23 @@ int find_private_key(int e, int n, int p, int q) {
 }
 
 // Função de criptografia usando exponenciação modular
-std::vector<long> encrypt(const std::string &m, int e, int n) {
-    std::vector<long> encrypted_message;
-    for (char ch : m) {
-        int encrypted_char = mod_exp(static_cast<int>(ch), e, n);
+// cipher = (message ^ e) % n
+std::vector<int> encrypt(const std::string &m, int e, int n) {
+    std::vector<int> encrypted_message;
+    for (char c : m) {
+        int encrypted_char = mod_exp(c, e, n);
         encrypted_message.push_back(encrypted_char);
     }
     return encrypted_message;
 }
 
 // Função de descriptografia usando exponenciação modular
-std::string decrypt(const std::vector<long> &encrypted_message, int d, int n) {
+// message = (cipher ^ d) % n
+std::string decrypt(const std::vector<int> &encrypted_message, int d, int n) {
     std::string decrypted_message = "";
-    for (int c : encrypted_message) {
-        int decrypted_char = mod_exp(c, d, n);
-        decrypted_message += static_cast<char>(decrypted_char);
+    for (int num : encrypted_message) {
+        char decrypted_char = mod_exp(num, d, n);
+        decrypted_message += decrypted_char;
     }
     return decrypted_message;
 }
@@ -110,7 +114,7 @@ int generate_random_prime() {
 
 
 // Gerar chave privada (p, q), ambos com no máximo 10 bits
-std::pair<int, int> generate_private_key() {
+std::pair<int, int> generate_private_key_primes() {
     int p = generate_random_prime();
     int q;
     do {
@@ -122,25 +126,41 @@ std::pair<int, int> generate_private_key() {
 // Gerar chave pública (e, n) a partir de p e q
 std::pair<int, int> generate_public_key(int p, int q) {
     int n = p * q;
-    int phi_n = (p - 1) * (q - 1);
+    int r = (p - 1) * (q - 1);
 
-    // Escolher e pequeno que seja coprimo com phi_n
-    int e = 3;
-    while (std::__gcd(e, phi_n) != 1 && e < phi_n) {
+    #ifdef DEBUG
+        std::cout << "n: " << n << std::endl;
+        std::cout << "r: " << r << std::endl;
+    #endif
+
+    // Escolher 'e' pequeno que seja coprimo com r
+    int e;
+    if (r % 2 == 0) {
+        e = 3; // Se r é par, escolher 'e' ímpar
+    } else {
+        e = 2; // Se r é ímpar, escolher 'e' par
+    }
+
+    // Encontrar um 'e' que seja coprimo com r
+    while (std::__gcd(e, r) != 1 && e < r) {
         e += 2; // Incrementar apenas números ímpares
     }
-    if (e >= phi_n) {
+    if (e >= r) {
         std::cout << "Error: Could not generate a valid public key!\n";
         exit(1);
     }
+    #ifdef DEBUG
+        std::cout << "e: " << e << std::endl;
+    #endif
+
     return std::make_pair(e, n);
 }
 int main(int argc, char *argv[]) {
     int opt;
     std::string message;
-    std::pair <int, int> private_keys, public_keys;
+    std::pair <int, int> private_key_primes, public_keys;
     int d, n, e, p, q, phi_n;
-    std::vector<long> encrypted, encrypted_message;
+    std::vector<int> encrypted, encrypted_message;
     std::string decrypted, num_str;
 
     while ((opt = getopt(argc, argv, "hged")) != -1) {
@@ -149,18 +169,20 @@ int main(int argc, char *argv[]) {
                 std::cout << "Usage: " << argv[0] << " [-h] [-g]\n";
                 std::cout << "Options:\n";
                 std::cout << "  -h  Show this help message and exit\n";
-                std::cout << "  -g  Generate a public key\n";
+                std::cout << "  -g  Generate a public/private key pair\n";
                 std::cout << "  -e  Encrypt a message\n";
                 std::cout << "  -d  Decrypt a message\n";
                 return 0;
             case 'g':
                 std::cout << "Generating a key pair...\n";
 
-                private_keys = generate_private_key();
-                p = private_keys.first;
-                q = private_keys.second;
+                private_key_primes = generate_private_key_primes();
+                p = private_key_primes.first;
+                q = private_key_primes.second;
 
-                std::cout << "Private key primes (p, q): " << p << " " << q << std::endl;
+                #ifdef DEBUG
+                    std::cout << "Private key primes (p, q): " << p << " " << q << std::endl;
+                #endif
 
                 public_keys = generate_public_key(p, q);
                 e = public_keys.first;
@@ -185,12 +207,13 @@ int main(int argc, char *argv[]) {
                 std::cout << "Encrypting a message...\n";
                 // lendo a frase criptografada
                 std::cout << "Enter the message to encrypt: ";
-                // std::cin.ignore();
-                // std::getline(std::cin, message);
-                message = "eu amo o dvd!";
+                std::cin.ignore();
+                std::getline(std::cin, message);
+
+                // convertendo a frase para um vetor de números ASCII
                 encrypted = encrypt(message, d, n);
                 std::cout << "Encrypted message: ";
-                for (long num : encrypted) {
+                for (int num : encrypted) {
                     std::cout << num << " ";
                 }
                 std::cout << std::endl;
