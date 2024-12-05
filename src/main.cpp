@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <algorithm>
 
-#define DEBUG
+// #define DEBUG
 
 /*
   Dado um texto cifrado com o RSA e sabendo que p e q são números primos
