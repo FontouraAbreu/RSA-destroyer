@@ -158,20 +158,29 @@ std::pair<int, int> generate_public_key(int p, int q) {
 int main(int argc, char *argv[]) {
     int opt;
     std::string message;
-    std::pair <int, int> private_key_primes, public_keys;
+    std::pair <int, int> private_key_primes, public_keys, factors;
     int d, n, e, p, q, phi_n;
     std::vector<int> encrypted, encrypted_message;
     std::string decrypted, num_str;
 
-    while ((opt = getopt(argc, argv, "hged")) != -1) {
+    while ((opt = getopt(argc, argv, "hgedf")) != -1) {
         switch (opt) {
             case 'h':
-                std::cout << "Usage: " << argv[0] << " [-h] [-g]\n";
+                std::cout << "Usage: " << argv[0] << " [-h] [-g] [-e] [-d] [-f]\n";
                 std::cout << "Options:\n";
                 std::cout << "  -h  Show this help message and exit\n";
                 std::cout << "  -g  Generate a public/private key pair\n";
                 std::cout << "  -e  Encrypt a message\n";
                 std::cout << "  -d  Decrypt a message\n";
+                std::cout << "  -f  Find the private key given the public key\n";
+                return 0;
+            case 'f':
+                std::cout << "Enter your public key (e, n): ";
+                std::cin >> e >> n;
+                factors = factorize_n(n);
+                std::cout << "Finding the private key...\n";
+                d = find_private_key(e, n, factors.first, factors.second);
+                std::cout << "The private key (d, n) is: " << d << " " << n << std::endl;
                 return 0;
             case 'g':
                 std::cout << "Generating a key pair...\n";
@@ -242,7 +251,7 @@ int main(int argc, char *argv[]) {
                 std::cout << "Decrypted message: " << decrypted << std::endl;
                 return 0;
             case '?':
-                std::cerr << "Usage: " << argv[0] << " [-h] [-g]\n";
+                std::cerr << "Usage: " << argv[0] << " [-h] [-g] [-e] [-d] [-f]\n";
                 return 1;
         }
     }
